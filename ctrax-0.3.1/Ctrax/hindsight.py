@@ -5,7 +5,7 @@ import sys
 import numpy as num
 #import pylab as mpl
 
-from params import params, diagnostics
+from params import params, diagnostics, diagnosticsAdd
 import ellipsesk as ell
 import estconncomps as est
 import kcluster2d as kcluster
@@ -186,7 +186,7 @@ class Hindsight:
         # for each death in frame T-2
         didfix = False
         deathscurr = list(self.milestones.getdeaths(T-2))
-        diagnostics['ndeaths_nohindsight'] += len(deathscurr)
+        diagnosticsAdd('ndeaths_nohindsight', len(deathscurr))
 
         ndeaths0 = len(deathscurr)
 
@@ -198,8 +198,8 @@ class Hindsight:
             for id1 in deathscurr:
                 didfix |= self.fix_spuriousdetection(id1,T-2)
 
-        diagnostics['ndeaths_notfixed'] += \
-            len(list(self.milestones.getdeaths(T-2)))
+        diagnosticsAdd('ndeaths_notfixed',
+            len(list(self.milestones.getdeaths(T-2))))
         
 
         # for each birth in frame T-2
@@ -212,12 +212,12 @@ class Hindsight:
             for id2 in birthscurr:
                 didfix |= self.fix_lostdetection(id2,T-2)
 
-        diagnostics['nbirths_notfixed'] += \
-            len(list(self.milestones.getbirths(T-2)))
+        diagnosticsAdd('nbirths_notfixed',
+            len(list(self.milestones.getbirths(T-2))))
 
 
         if didfix:
-            diagnostics['nhindsight_fixed'] += 1
+            diagnosticsAdd('nhindsight_fixed')
 
         if DEBUG_LEVEL > 1: 
             if didfix:
@@ -281,7 +281,7 @@ class Hindsight:
         if DEBUG_LEVEL > 1: print '*** deleted track for id=%d with life span=%d (%d-%d)'%(id,lifespan,t1,t2)
 
         # update diagnostics
-        diagnostics['nspurious_fixed'] += 1
+        diagnosticsAdd('nspurious_fixed')
 
         return True
 
@@ -379,7 +379,7 @@ class Hindsight:
         self.milestones.setdeath(id1,d2)
 
         # update diagnostics
-        diagnostics['nlost_fixed'] += 1
+        diagnosticsAdd('nlost_fixed')
 
         return True
 
@@ -603,7 +603,7 @@ class Hindsight:
             self.milestones.setdeath(id1,d3)
 
         # update diagnostics
-        diagnostics['nmerged_fixed'] += 1
+        diagnosticsAdd('nmerged_fixed')
 
         return True
 
@@ -740,7 +740,7 @@ class Hindsight:
                     raise Exception("at tmpt = %d of check, tracks[%d] is empty"%(tmpt,t2))
             
         # update diagnostics
-        diagnostics['nsplits_fixed'] += 1
+        diagnosticsAdd('nsplits_fixed')
 
         return True
 

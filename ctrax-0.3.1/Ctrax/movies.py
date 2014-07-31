@@ -166,24 +166,26 @@ If initpath is a directory and not in interactive mode, it's an error."""
         # read AVI
         elif ext == '.avi':
             try:
+                print "YL: trying Avi()"
                 self.h_mov = Avi( self.fullpath )
                 self.type = 'avi'
             except:
                 try:
+                    print "YL: trying CompressedAvi()"
                     self.h_mov = CompressedAvi( self.fullpath )
                     self.type = 'avbin'
                 except:
                     if self.interactive:
                         if USE_AVBIN and not media.have_avbin:
-                            msgtxt = "Failed opening file \"%s\". AVbin could not be loaded, and compressed AVIs cannot be read."%(filename)
+                            msgtxt = "Failed opening file \"%s\". AVbin could not be loaded, and compressed AVIs cannot be read."%( self.fullpath )
                         else:
-                            msgtxt = "Failed opening file \"%s\". AVbin was successfully loaded, but could not read the AVI."%(filename)
+                            msgtxt = "Failed opening file \"%s\". AVbin was successfully loaded, but could not read the AVI."%( self.fullpath )
                         wx.MessageBox( msgtxt, "Error", wx.ICON_ERROR )
                     raise
                 else:
                     if params.interactive:
                         wx.MessageBox("Your movie is most likely compressed. Out-of-order frame access (e.g. dragging the frame slider toolbars around) will be slow. At this time, the frame chosen to be displayed may be off by one or two frames, i.e. may not line up perfectly with computed trajectories.","Warning",wx.ICON_WARNING)
-            if params.interactive and self.h_mov.bits_per_pixel == 24 and not DEBUG and False:
+            if params.interactive and self.h_mov.bits_per_pixel == 24 and not DEBUG_MOVIES and False:
                 wx.MessageBox( "Currently, RGB movies are immediately converted to grayscale. All color information is ignored.", "Warning", wx.ICON_WARNING )
 
         # unknown movie type
@@ -232,6 +234,10 @@ If initpath is a directory and not in interactive mode, it's an error."""
     def get_n_frames( self ): return self.h_mov.get_n_frames()
     def get_width( self ): return self.h_mov.get_width()
     def get_height( self ): return self.h_mov.get_height()
+    def get_fps(self): return self.h_mov.fps
+
+    # returns 0 for "do not recalculate"
+    def recalc_n_frames(self): return int(self.h_mov.fps * params.recalc_bg_minutes*60)
 
     def get_some_timestamps( self, t1=0, t2=num.inf ):
         t2 = min(t2,self.get_n_frames())
@@ -459,6 +465,8 @@ class Avi:
     """Read uncompressed AVI movies."""
     def __init__( self, filename ):
 
+        print "YL: Avi __init__"
+
         self.issbfmf = False
  
         # need to open in binary mode to support Windows:
@@ -508,6 +516,8 @@ class Avi:
     # read_header()
     ###################################################################
     def read_header( self ):
+
+        print "YL: read_header"
 
         # read RIFF then riffsize
         RIFF, riff_size, AVI = struct.unpack( '4sI4s', self.file.read( 12 ) )
@@ -572,6 +582,7 @@ class Avi:
                 print "movie header vids error at", vids
                 raise TypeError("Unsupported AVI file type. First stream found is not a video stream.")
             # check fcc
+            print "YL: fcc check"
             if fcc not in ['DIB ', '\x00\x00\x00\x00', "", "RAW ", "NONE", chr(24)+"BGR", 'Y8  ']:
                 print "movie header codec error at", fcc
                 raise TypeError("Unsupported AVI file type %s, only uncompressed AVIs supported."%fcc)
@@ -1021,6 +1032,8 @@ class CompressedAvi:
         self.source._seek(self.ZERO)
         self.currframe = 0
         (frame,ts) = self.get_next_frame_and_reset_buffer()
+
+        if DEBUG_MOVIES: print "Done initializing CompressedAVI"
 
     def get_all_timestamps( self ):
         return num.arange( self.n_frames )/self.fps + self.start_time

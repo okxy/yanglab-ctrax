@@ -18,6 +18,9 @@ import sys
 
 from params import params
 
+import operator as op, cv2, atexit, cPickle
+import match_template as mt
+
 import os
 import codedir
 SETTINGS_RSRC_FILE = os.path.join(codedir.codedir,'xrc','tracking_settings.xrc')
@@ -41,6 +44,23 @@ class CtraxAlgorithm (settings.AppWithSettings):
         if DEBUG: print "Last frame tracked = %d"%self.ann_file.lastframetracked
 
 
+        print "YL:"
+        print " bg_type", self.bg_imgs.bg_type
+        print " norm_type", self.bg_imgs.norm_type
+        print " thresh", params.n_bg_std_thresh, params.n_bg_std_thresh_low
+        print " area", params.maxshape.area, params.minshape.area
+        print " max_jump", params.max_jump, params.max_jump_split
+        print " use_shadow_detector", params.use_shadow_detector
+        print " recalc_bg_minutes", params.recalc_bg_minutes
+        print " recalc_n_frames", self.movie.recalc_n_frames()
+        print " fps %.1f" %self.movie.get_fps()
+        strt = time.clock()
+
+        if params.use_shadow_detector:
+            fx, fy = self.matchTemplate()
+            print " fx, fy", fx, fy
+            bx = (fx[0]+fx[1]) / 2
+
         # maximum number of frames we will look back to fix errors
         self.maxlookback = max(params.lostdetection_length,
                                params.spuriousdetection_length,
@@ -61,13 +81,20 @@ class CtraxAlgorithm (settings.AppWithSettings):
         # initialize dfore and connected component buffer
         self.bg_imgs.set_buffer_maxnframes()
 
-        for self.start_frame in range(self.start_frame,self.movie.get_n_frames()):
+        rc, rnf, bgs, nf = 0, self.movie.recalc_n_frames(), [], self.movie.get_n_frames()
+        def appendBg():
+            bgRw = self.bg_imgs.centers if self.bg_imgs.varying_bg else [self.bg_imgs.center]
+            bgs.append(dict(bgs=[bg.astype(num.float32) for bg in bgRw],
+                varying_bg=self.bg_imgs.varying_bg,
+                mean_separator=self.bg_imgs.mean_separator))
+        appendBg()
+        for self.start_frame in range(self.start_frame, nf):
 
             # KB 20120109 added last_frame command-line option
             if self.start_frame >= self.last_frame:
                 break
 
-            if DEBUG_LEVEL > 0: print "Tracking frame %d / %d"%(self.start_frame,self.movie.get_n_frames()-1)
+            if DEBUG_LEVEL > 0: print "Tracking frame %d / %d"%(self.start_frame, nf-1)
         
             #if DEBUG:
             #    break
@@ -76,6 +103,19 @@ class CtraxAlgorithm (settings.AppWithSettings):
                 break
 
             last_time = time.time()
+
+            # recalculate background?
+            rc += 1
+            if rnf > 0 and rc > rnf:
+                if nf - self.start_frame > rnf/2:
+                    assert self.start_frame % rnf == 0
+                      # note: makes it easy to calculate which background was used;
+                      #  not required for tracking
+                    self.bg_imgs.bg_firstframe = self.start_frame
+                    self.bg_imgs.bg_lastframe = self.start_frame + rnf - 1
+                    self.OnComputeBg()
+                    appendBg()
+                rc = 1
 
             # perform background subtraction
             #try:
@@ -101,6 +141,28 @@ class CtraxAlgorithm (settings.AppWithSettings):
             # find observations
             self.ellipses = ell.find_ellipses( self.dfore, self.cc, self.ncc )
 
+            # shadow detector
+            if params.use_shadow_detector:
+                ne = 2*[0]   # idx: left, right (chamber)
+                bei, bdist, bgood = 2*[-1], 2*[1000], 2*[None]   # best
+                for ei, e in enumerate(self.ellipses):
+                    if e.area < params.minshape.area:
+                        continue
+                    good = e.area >= params.shadow_detector_minarea and (not e.merged_areas or
+                        any(a >= params.minshape.area for a in e.merged_areas))
+                    i = e.center.x > bx
+                    ne[i] += 1
+                    dist = num.sqrt((e.center.x-fx[i])**2 + (e.center.y-fy[i])**2)
+                    if bei[i] < 0 or good and not bgood[i] or dist < bdist[i] and good == bgood[i]:
+                        bei[i], bdist[i], bgood[i] = ei, dist, good
+                #print "l:%d r:%d" %(ne)
+
+                # keep only non-shadow ellipses
+                numEll = len(self.ellipses)
+                self.ellipses = [self.ellipses[i] for i in bei if i>=0]
+                if len(self.ellipses) < numEll:
+                    print ">>> kept only", bei
+ 
             #if params.DOBREAK:
             #    print 'Exiting at frame %d'%self.start_frame
             #    sys.exit(1)
@@ -149,7 +211,9 @@ class CtraxAlgorithm (settings.AppWithSettings):
                     if self.start_frame:
                         self.ShowCurrentFrame()
                 else:
-                    print "    Frame %d / %d"%(self.start_frame,self.movie.get_n_frames())
+                    on = ("on " if self.bg_imgs.on else "off ") if self.bg_imgs.varying_bg else ""
+                    print "    Frame %d / %d %s[%ds]" \
+                        %(self.start_frame, nf, on, time.clock()-strt)
                 self.request_refresh = False
 
             # process gui events
@@ -161,7 +225,48 @@ class CtraxAlgorithm (settings.AppWithSettings):
             if (self.start_frame % 100) == 0 and self.has( 'diagnostics_filename' ):
                 self.write_diagnostics() # save ongoing
 
+        self.saveBackgrounds(bgs)
         self.Finish()
+
+    def bgrImg(self, img):
+        return cv2.cvtColor(img.astype(num.uint8), cv2.COLOR_GRAY2BGR)
+
+    def saveBackgrounds(self, bgs):
+        nbgs = [len(e['bgs']) for e in bgs]
+        cols = max(nbgs)
+        fullR = nbgs.index(cols)
+        fullBgs, mSep = [bgs[fullR][k] for k in ['bgs', 'mean_separator']]
+        bg = self.bgrImg(self.bg_imgs.center)
+        bg[:,:,:] = 255
+        h, w = bg.shape[:2]
+        bg = cv2.repeat(bg, len(bgs), cols)
+        for r, e in enumerate(bgs):
+            ebgs = e['bgs']
+            for c, bg1 in enumerate(ebgs):
+                if r != fullR:
+                    cD = c if len(ebgs) == len(fullBgs) else num.mean(bg1) > mSep
+                    bgD = num.absolute(bg1 - fullBgs[c])
+                    rv, bg1 = cv2.threshold((bgD-bgD.min()) * 4, 255, 0, cv2.THRESH_TRUNC)
+                x, y = c*w, r*h
+                bg[y:y+h, x:x+w] = cv2.flip(self.bgrImg(bg1), 0)
+                if c > 0:
+                    bg[y:y+h, x] = 255
+                if c+1 == len(ebgs) and r > 0:
+                    bg[y, 0:cols*w] = 255
+        cv2.imwrite(self.get_filename_with_extension('_bg.png'), bg)
+        with open(params.bgs_file, 'wb') as f:
+            cPickle.dump(dict(recalc_n_frames=self.movie.recalc_n_frames(),
+                backgrounds=bgs), f, -1)
+
+    def matchTemplate(self):
+        tfx, tfy = [45, 151], 2*[70]   # center points in 320x240 template
+        bg = self.bgrImg(self.bg_imgs.center)
+        r = num.array(mt.match(cv2.resize(bg, (0,0), fx=2, fy=2),
+            show=params.interactive,
+            outF=self.get_filename_with_extension('_tm.jpg'))) / 2
+        print " min distance template to image border", r[2]
+        return num.array(tfx)+r[0], num.array(tfy)+r[1]
+          # note: Ctrax y coordinate flipped for, e.g., M-JPEG
 
     def write_diagnostics( self ):
         """Safely write diagnostics file."""
@@ -170,6 +275,9 @@ class CtraxAlgorithm (settings.AppWithSettings):
         annot.WriteDiagnostics( self.diagnostics_filename )
 
     def Finish(self):
+
+        if self.bg_imgs.varying_bg:
+            print "YL: on_changes:", self.bg_imgs.on_changes
 
         # write the rest of the frames to file
         self.ann_file.finish_writing()
@@ -188,6 +296,9 @@ class CtraxAlgorithm (settings.AppWithSettings):
 
         # estimate the background
         if (not self.IsBGModel()) or params.batch_autodetect_bg_model:
+            rnf = self.movie.recalc_n_frames()
+            if rnf > 0:
+                self.bg_imgs.bg_lastframe = self.bg_imgs.bg_firstframe + rnf - 1
             print "Estimating background model"
             if not params.batch_autodetect_bg_model:
                 print "**autodetecting background because no existing model is loaded"
@@ -279,4 +390,10 @@ class CtraxAlgorithm (settings.AppWithSettings):
         self.ann_file.WriteMAT( savename )
 
         print "Done\n"
+
+@atexit.register
+def doneFile():
+    df = open("__done__", "a", 0)
+    df.write("d")
+    df.close()
 

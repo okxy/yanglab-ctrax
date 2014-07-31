@@ -71,6 +71,8 @@ class CtraxApp (algorithm.CtraxAlgorithm): # eventually inherits from wx.App
 
         if params.interactive:
             print "******** Ctrax Warning and Error Messages ********"
+            print ">>> Yang Lab version <<<"
+            print '  additional output typically prefixed with "YL:"\n'
             print "Ctrax is currently under development, and you may"
             print "encounter bugs with the program, or correct usage"
             print "may not be obvious. Error and warning messages"
@@ -391,6 +393,7 @@ If DiagnosticsFile is not set, then
             self.img_wind_child.Bind( wx.EVT_LEFT_DCLICK, self.OnMouseDoubleClick )
             
         # setup background-subtraction pieces
+        params.bgs_file = self.get_filename_with_extension('_bg.data')
         self.bg_imgs = bg.BackgroundCalculator( self.movie )
         if DEBUG: print "initialized backsub data structure"
 
@@ -462,6 +465,7 @@ If DiagnosticsFile is not set, then
 
         # show movie and update GUI
         if params.interactive:
+            params.bg_sub_file = self.get_filename_with_extension('_bg_sub.png')
             self.OnMouseDoubleClick( None ) # zoom out
             self.ShowCurrentFrame()
             self.EnableControls()
@@ -1131,6 +1135,9 @@ the new name is created and returned without user input."""
 
         else:
             success = self.bg_imgs.OnCalculate()
+
+        print "YL: updateParameters()"
+        self.bg_imgs.updateParameters()
 
         return success
 

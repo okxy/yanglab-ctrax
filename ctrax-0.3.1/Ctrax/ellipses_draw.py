@@ -246,6 +246,12 @@ Skips empty ellipses (center==size==area==0)."""
 	    xprev = xx
 	    yprev = yy
 
+            # color "on substrate" differently
+            if False:
+                a, b = target.size.height, target.size.width
+                if a/b > 2.4 and b < 2.5: #a*b*num.pi*4 < 240:
+                    color = [255,255,128]   # yellow
+
             ax = 2.*target.size.width * num.cos( aa )
             ay = 2.*target.size.height * num.sin( aa )
             xx = target.center.x + ax*alpha - ay*beta

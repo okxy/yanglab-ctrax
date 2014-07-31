@@ -5,7 +5,7 @@ import codedir
 import wx
 from wx import xrc
 import scipy.signal as signal
-import scipy.misc.pilutil as pilutil
+import scipy.misc as misc
 import numpy as num
 import motmot.wxvideo.wxvideo as wxvideo
 import motmot.wxvalidatedtext.wxvalidatedtext as wxvt # part of Motmot
@@ -875,6 +875,6 @@ def resize_image_for_speed(im):
             nc = RESIZE
             nc_resize_ratio = float(nc)/float(nc0)
             nr_resize_ratio = float(nr)/float(nr0)
-        im = pilutil.imresize(im,[nr,nc])
+        im = misc.imresize(im,[nr,nc])
 
     return (im,nr_resize_ratio,nc_resize_ratio)
