@@ -21,6 +21,8 @@ import roi
 import fixbg
 from version import DEBUG
 from zoomable_image_canvas import ZoomableImageCanvas
+from PIL import Image
+import cv2, util
 
 THRESH_RSRC_FILE = os.path.join(codedir.codedir,'xrc','bg_thresh.xrc')
 SETTINGS_RSRC_FILE = os.path.join(codedir.codedir,'xrc','bg_settings.xrc')
@@ -36,6 +38,7 @@ class BackgroundSettings:
 
         self.old_thresh = params.n_bg_std_thresh
         self.show_frame = framenumber
+        self.bg_idx = -1
         self.dosub_callback = dosub_callback
 
         rsrc = xrc.XmlResource( THRESH_RSRC_FILE )
@@ -652,8 +655,10 @@ class BackgroundSettings:
         
         # do background subtraction if necessary
         if sub_type in [params.SHOW_DISTANCE,params.SHOW_THRESH,
-                        params.SHOW_CC,params.SHOW_ELLIPSES]:
-            (dfore,bw,cc,ncc) = self.sub_bg( framenumber )
+                        params.SHOW_CC,params.SHOW_ELLIPSES,
+                        params.SHOW_BACKGROUND,params.SHOW_DEV,
+                        params.SHOW_BG_AND_DIST]:
+            (dfore,bw,cc,ncc) = self.sub_bg( framenumber )   # sets self.on, etc.
         else:
             if hasattr( self, 'dfore' ):
                 dfore = self.dfore
@@ -672,7 +677,8 @@ class BackgroundSettings:
 
         # format image in "subtraction type"
         if sub_type == params.SHOW_BACKGROUND:
-            img_8 = imagesk.double2mono8(self.center,donormalize=False)
+            cntr = self.centers[self.on] if self.varying_bg else self.center
+            img_8 = imagesk.double2mono8(cntr,donormalize=False)
             img_format = 'MONO8'
             preview_range = (0,255)
         elif sub_type == params.SHOW_DISTANCE:
@@ -689,16 +695,17 @@ class BackgroundSettings:
             img_format = 'MONO8'
             preview_range = (0,1)
         elif sub_type == params.SHOW_DEV:
-            mu = num.mean(self.dev)
-            sig = num.std(self.dev)
+            dev = self.devs[self.on] if self.varying_bg else self.dev
+            mu = num.mean(dev)
+            sig = num.std(dev)
             if sig == 0:
-                img_8 = imagesk.double2mono8(self.dev)
+                img_8 = imagesk.double2mono8(dev)
                 n1 = mu
                 n2 = mu
             else:
                 n1 = max(0,mu - 3.*sig)
                 n2 = mu + 3.*sig
-                img_8 = imagesk.double2mono8(self.dev.clip(n1,n2))
+                img_8 = imagesk.double2mono8(dev.clip(n1,n2))
             img_format = 'MONO8'
             preview_range = (n1,n2)
         elif sub_type == params.SHOW_CC:
@@ -718,6 +725,13 @@ class BackgroundSettings:
             preview_range = (0,255)
             line_segs.extend( linesegs )
             line_clrs.extend( linecolors )
+        elif sub_type == params.SHOW_BG_AND_DIST:
+            cntr = self.centers[self.on] if self.varying_bg else self.center
+            img = Image.fromarray(imagesk.double2mono8(cntr,donormalize=False)).convert('RGB')
+            img.paste((0,255,0), None, Image.fromarray(imagesk.double2mono8(dfore)))
+            img_8 = num.array(img)
+            img_format = 'RGB8'
+            preview_range = (0,255)
         elif sub_type in params.SHOW_EXPBGFGMODEL: 
             # check for expbgfgmodel
             if not params.use_expbgfgmodel or not hasattr(self,'expbgfgmodel') or \
@@ -795,9 +809,32 @@ class BackgroundSettings:
     def DoSub( self ):
         """Do background subtraction and draw to screen."""
 
+        if self.bgs:
+            bgs = self.bgs['backgrounds']
+            idx = min(int(self.show_frame / self.bgs['recalc_n_frames']), len(bgs)-1)
+            if idx != self.bg_idx:
+                self.varying_bg, centers = bgs[idx]['varying_bg'], bgs[idx]['bgs']
+                # note: the following works only for self.norm_type == 'intensity'
+                #  there is a case for rewriting the following to use updateParameters()
+                if self.varying_bg:
+                    self.centers = self.devs = centers
+                    self.mean_separator = bgs[idx]['mean_separator']
+                else:
+                    self.center = self.dev = centers[0]
+            self.bg_idx = idx
+
         img_8, img_format, line_segs, line_clrs, \
         self.dfore, self.bw, self.cc, self.ncc, preview_range \
           = self.get_sub_image( self.show_img_type, self.show_frame )
+
+        if img_format == 'MONO8' and line_segs:
+            imgW = cv2.cvtColor(img_8, cv2.COLOR_GRAY2BGR)
+        else:
+            imgW = cv2.cvtColor(img_8, cv2.COLOR_RGB2BGR) if img_format == 'RGB8' else img_8.copy()
+        for ls, lc in zip(line_segs, line_clrs):   # adds ellipses
+            rgb = util.intR(num.array(lc)[:3]*255)
+            cv2.line(imgW, util.intR(ls[:2]), util.intR(ls[2:]), rgb[::-1])
+        cv2.imwrite(params.bg_sub_file, cv2.flip(imgW, 0))
 
         self.img_wind.update_image_and_drawings( 'bg_img', img_8,
                                                  format=img_format,

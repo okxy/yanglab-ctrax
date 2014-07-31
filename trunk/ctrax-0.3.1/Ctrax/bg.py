@@ -21,6 +21,8 @@ import highboostfilter
 from movies import NoMoreFramesException
 from version import DEBUG
 
+import copy, cPickle, scipy.cluster.vq as vq
+
 HF_RSRC_FILE = os.path.join(codedir.codedir,'xrc','homomorphic.xrc')
 
 SAVE_STUFF = False
@@ -113,7 +115,7 @@ class BackgroundCalculator (bg_settings.BackgroundSettings):
         params.n_frames = params.movie.get_n_frames()
         
         self.bg_firstframe = 0
-        self.bg_lastframe = 99999
+        self.bg_lastframe = 999999
         self.n_bg_frames = 100
 
         params.movie_size = (params.movie.get_height(), params.movie.get_width())
@@ -168,6 +170,23 @@ class BackgroundCalculator (bg_settings.BackgroundSettings):
         self.fixbg_undo_data = []
         self.fixbg_undo_dev = []
 
+        # varying background
+        self.varying_bg = False      # auto-detected
+        self.mean_separator = None   # on = num.mean(im) > self.mean_separator
+        self.bg_frames = 2*[None]    # frames used to calculate background (for on/off)
+        self.meds, self.mads = 2*[None], 2*[None]
+        self.on = None               # set in sub_bg()
+        self.on_changes = []
+
+        self.first = False
+
+        try:
+            with open(params.bgs_file, 'rb') as f:
+                self.bgs = cPickle.load(f)
+                print "YL: read bgs"
+        except IOError:
+            self.bgs = None
+
     #def precomputeBounds(self):
     #    
     #    # less restrictive bounds
@@ -209,6 +228,9 @@ class BackgroundCalculator (bg_settings.BackgroundSettings):
 
         if self.use_median and hasattr( self, 'med' ):
             self.center = self.med.copy()
+            if self.varying_bg:
+                self.centers = copy.deepcopy(self.meds)
+
         elif hasattr( self, 'mean' ):
             self.center = self.mean.copy()
 
@@ -222,6 +244,8 @@ class BackgroundCalculator (bg_settings.BackgroundSettings):
                 self.dev[self.dev > params.bg_std_max] = params.bg_std_max
         elif self.norm_type == 'intensity' and hasattr( self, 'center' ):
             self.dev = self.center.copy()
+            if self.varying_bg:
+                self.devs = copy.deepcopy(self.centers)
         elif self.norm_type == 'homomorphic' and hasattr( self, 'hfnorm' ):
             self.dev = self.hfnorm.copy()
         
@@ -274,7 +298,7 @@ class BackgroundCalculator (bg_settings.BackgroundSettings):
             Z = num.zeros((nr,nc), dtype=self.mean.dtype)
         else:
             nframesused = 0
-            
+
         for i in range(self.bg_firstframe,bg_lastframe+1,nframesskip):
 
             if params.feedback_enabled:
@@ -379,8 +403,63 @@ class BackgroundCalculator (bg_settings.BackgroundSettings):
 
         return (nframesskip,nframes,bg_lastframe)
 
-    def flexmedmad( self, parent=None ):
-        
+    # relative standard error
+    def rse(self, a, mean=None):
+        return num.std(a)/(num.mean(a) if mean is None else mean)
+
+    # determines whether to use "varying background"
+    # note: uses randomly selected frames
+    def checkForVaryingBg(self):
+        nf, lf = self.est_bg_selectframes()[1:]
+        ff = self.bg_firstframe
+        print "YL: checkForVaryingBg (frames %d - %d)" %(ff, lf)
+        nfC, nfAll = 2*nf, lf - ff + 1
+        frms = num.sort(num.random.choice(nfAll, min(nfC, nfAll), replace=False))
+        means = num.array([num.mean(params.movie.get_frame(f+ff)[0]) for f in frms])
+        centrs = vq.kmeans2(means, num.array([means.min(), means.max()]))[0]
+          # note: using just min and max instead of k-means probably fine
+        ms = self.mean_separator = num.mean(centrs)
+        on = means > ms
+        rse, rseOn = self.rse(means), self.rse(means[on])
+          # note: rse (and rseOn) no longer used
+        print " RSE of %d frame means: all %f, on %f" %(nfC, rse, rseOn)
+        # sample values for rse and rseOn:
+        #  regular:   all 0.001488, on 0.000750
+        #  UV on:     all 0.003489, on 0.001670
+        #  UV on off: all 0.145429, on 0.003000
+        #  UV on 5%:  all 0.039912, on 0.001966
+        cd = abs(centrs[1]-centrs[0])
+        print " frame means centroid distance: %f, RE: %f" %(cd, cd/ms)
+        # sample values for centroid distance and RE:
+        #  UV off:     0.264704, RE: 0.003986
+        #  UV on off: 13.116655, RE: 0.174778
+        #  UV on 5%:  12.879203, RE: 0.171918
+        self.varying_bg = cd/ms > 0.03
+        print " varying background: %s" %self.varying_bg
+
+        if self.varying_bg:
+            fon = float(num.count_nonzero(on)) / means.size
+            nf1 = int(nf * 1/min(fon, 1-fon) * 1.2)
+            frms = num.sort(num.random.choice(nfAll, min(nf1, nfAll), replace=False))
+            means = num.array([num.mean(params.movie.get_frame(f+ff)[0]) for f in frms])
+            on = means > ms
+            for on in [False, True]:
+                sfs = frms[means > ms if on else means <= ms]
+                self.bg_frames[on] = \
+                    num.sort(num.random.choice(sfs, min(sfs.size, nf), replace=False)) + ff
+
+    def flexmedmad(self, parent=None):
+        if self.varying_bg:
+            rv = True
+            for on in [False, True]:
+                print "YL: computing background for on=%s:" %on
+                rv = rv and self.flexmedmad1(parent, on)
+                self.meds[on], self.mads[on] = self.med, self.mad
+            return rv
+        else:
+            return self.flexmedmad1(parent)
+
+    def flexmedmad1(self, parent=None, on=None):
         if params.use_expbgfgmodel:
             print 'Computing median with ExpBGFGModel'
 
@@ -483,8 +562,9 @@ class BackgroundCalculator (bg_settings.BackgroundSettings):
             if DEBUG: print 'Reading ...'
             
             # loop through frames
-            frame = self.bg_firstframe
-            for i in range(nframes):
+            ff, nfs = self.bg_firstframe, nframesskip
+            frms = range(ff, ff+nframes*nfs, nfs) if on is None else self.bg_frames[on]
+            for i, frame in enumerate(frms):
 
                 if params.feedback_enabled:
                     keepgoing = progressbar.Update(value=offseti*nframes + i,
@@ -503,7 +583,7 @@ class BackgroundCalculator (bg_settings.BackgroundSettings):
 
                 # read in the entire frame
                 data,stamp = params.movie.get_frame(frame)
-                
+
                 # crop out the rows we are interested in
                 buf[i,:,:]  = data[rowoffset:rowoffsetnext]
 
@@ -623,15 +703,22 @@ class BackgroundCalculator (bg_settings.BackgroundSettings):
                 # MADTOSTDFACTOR = 1./norminv(.75)
                 mad *= MADTOSTDFACTOR
                 self.mad[rowoffset:rowoffsetnext] = mad
-                
+
             else:  
                 buf.sort(axis=2,kind='mergesort')
-                # store the median
-                self.med[rowoffset:rowoffsetnext,:] = buf[:,:,middle1]
-                if iseven:
-                    self.med[rowoffset:rowoffsetnext,:] += buf[:,:,middle2]
-                    self.med[rowoffset:rowoffsetnext,:] /= 2.
-                
+                pcntl = params.percentile_for_bg
+                if pcntl:
+                    idx = num.floor(nframes*(100-pcntl)/100.)
+                    idx = max(0, min(idx, nframes-1))
+                    print "YL: percentile given (%d) -- using frame %d out of %d" %(pcntl, idx, nframes)
+                    self.med[rowoffset:rowoffsetnext,:] = buf[:,:,idx]
+                else:
+                    # store the median
+                    self.med[rowoffset:rowoffsetnext,:] = buf[:,:,middle1]
+                    if iseven:
+                        self.med[rowoffset:rowoffsetnext,:] += buf[:,:,middle2]
+                        self.med[rowoffset:rowoffsetnext,:] /= 2.
+
                 # store the absolute difference
                 buf = num.double(buf)
                 for j in range(nframes):
@@ -899,6 +986,8 @@ class BackgroundCalculator (bg_settings.BackgroundSettings):
         if self.n_bg_frames > params.n_frames:
             self.n_bg_frames = params.n_frames
 
+        self.checkForVaryingBg()
+
         # are we using the median or the mean?
         if self.use_median:
             if DEBUG: print 'params.movie.type = ' + str(params.movie.type)
@@ -931,6 +1020,9 @@ class BackgroundCalculator (bg_settings.BackgroundSettings):
                         return False
                 self.center = self.med.copy()
                 self.dev = self.mad.copy()
+                if self.varying_bg:
+                    self.centers = copy.deepcopy(self.meds)
+                    self.devs = copy.deepcopy(self.mads)
                 #wx.MessageBox( "Only FMFs are supported for background estimation so far.",
                 #               "Error", wx.ICON_ERROR )
 
@@ -1021,25 +1113,34 @@ class BackgroundCalculator (bg_settings.BackgroundSettings):
             self.curr_stamp = stamp
 
             dfore = num.zeros(im.shape, dtype=num.float64)
+            if self.varying_bg:
+                on = num.mean(im) > self.mean_separator
+                cntr = self.centers[on]
+                if framenumber is not None and self.on != on:
+                    self.on_changes.append([framenumber, on])
+                self.on = on
+            else:
+                cntr = self.center
             if self.bg_type == 'light_on_dark':
                 # if white flies on a dark background, then we only care about differences
                 # im - bgmodel.center > bgmodel.thresh
-                dfore[self.isarena] = num.maximum(0,im[self.isarena] - self.center[self.isarena])
+                dfore[self.isarena] = num.maximum(0,im[self.isarena] - cntr[self.isarena])
 
             elif self.bg_type == 'dark_on_light':
                 # if dark flies on a white background, then we only care about differences
                 # bgmodel.center - im > bgmodel.thresh
-                dfore[self.isarena] = num.maximum(0,self.center[self.isarena] - im[self.isarena])
+                dfore[self.isarena] = num.maximum(0,cntr[self.isarena] - im[self.isarena])
 
             else:
                 # otherwise, we care about both directions
-                dfore[self.isarena] = num.abs(im[self.isarena] - self.center[self.isarena])
+                dfore[self.isarena] = num.abs(im[self.isarena] - cntr[self.isarena])
                 
             if num.any(num.isnan(dfore)):
                 raise ValueError('Difference between image and bg center has nan values')
 
             #print "dev.range = [%f,%f]"%(num.min(self.dev),num.max(self.dev))
-            dfore[self.isarena] /= self.dev[self.isarena]
+            dev = self.devs[on] if self.varying_bg else self.dev
+            dfore[self.isarena] /= dev[self.isarena]
             
             if num.any(num.isnan(dfore)):
                 raise ValueError('Normalized distance between image and bg center has nan values')
@@ -1073,16 +1174,20 @@ class BackgroundCalculator (bg_settings.BackgroundSettings):
         [cc,ncc] = meas.label(bw)
 
         # make sure there aren't too many connected components
-        if ncc > params.max_n_clusters:
+        if ncc > params.max_n_clusters or self.first:
             # sort by area
             areas = num.zeros( (cc.max(),), dtype=num.float64 )
             print "%d objects found; determining the largest %d to keep"%(areas.size, params.max_n_clusters)
             for clust_ind in range( areas.size ):
-                areas[clust_ind] = (cc == clust_ind).nonzero()[0].size
+                areas[clust_ind] = (cc == clust_ind+1).nonzero()[0].size
             area_order = num.argsort( areas )
-            for clust_ind in area_order[-params.max_n_clusters:]:
-                cc[cc == clust_ind] = 0
-            ncc = params.max_n_clusters
+            if self.first:
+                print "YL:", areas, area_order
+                self.first = False
+            else:
+                for clust_ind in area_order[-params.max_n_clusters:]:
+                    cc[cc == clust_ind] = 0
+                ncc = params.max_n_clusters
 
         return (dfore,bw,cc,ncc)
     

@@ -4,7 +4,7 @@ from ellipsesk import *
 import scipy.ndimage as meas
 import kcluster2d as kcluster
 #from kcluster import gmm
-from params import params, diagnostics
+from params import params, diagnostics, diagnosticsAdd
 # this uses its own debug
 from version import DEBUG_ESTCONNCOMPS as DEBUG
 from version import DEBUG_TRACKINGSETTINGS
@@ -261,7 +261,7 @@ def trylowerthresh(ellipses,i,L,dfore):
 
     # update diagnostics
     if not issmall:
-        diagnostics['nsmall_lowerthresh'] += 1
+        diagnosticsAdd('nsmall_lowerthresh')
 
     return (issmall,ellipsenew)
 
@@ -372,8 +372,12 @@ def hindsight_computemergepenalty(ellipses,i,j,L,dfore):
     return (mergepenalty,ellipsemerge)
 
 def mergeellipses(ellipses,i,j,ellipsemerge,issmall,L):
+    mas = []
+    for e in (ellipses[k] for k in (i, j)):
+        mas.extend(e.merged_areas if e.merged_areas else [e.area])
     # set i to the new merged ellipse
     ellipses[i] = ellipsemerge.copy()
+    ellipses[i].merged_areas = mas
     #copyellipse(ellipses,i,ellipsemerge)
     # remove j
     ellipses[j].area = 0
@@ -421,7 +425,7 @@ def trymerge(ellipses,issmall,i,L,dfore):
     mergeellipses(ellipses,i,canmergewith,ellipsesmerge[bestjmerge],issmall,L)
 
     # update diagnostics
-    diagnostics['nsmall_merged'] += 1
+    diagnosticsAdd('nsmall_merged')
 
     #print 'after mergeellipses, ellipses = '
     #for jtmp in range(len(ellipses)):
@@ -432,7 +436,7 @@ def trydelete(ellipses,i,issmall):
     #print 'trying to delete. area of ellipse is %.2f, maxareadelete is %.2f'%(ellipses[i].area,params.maxareadelete)
     if ellipses[i].area < params.maxareadelete:
         ellipses[i].area = 0
-        diagnostics['nsmall_deleted'] += 1
+        diagnosticsAdd('nsmall_deleted')
         issmall[i] = False
         return True
     return False
@@ -495,7 +499,7 @@ def fixsmall(ellipses,L,dfore):
             #copyellipse(ellipses,i,ellipselowerthresh)
             diddelete = trydelete(ellipses,i,issmall)
             if not diddelete:
-                diagnostics['nsmall_notfixed'] += 1
+                diagnosticsAdd('nsmall_notfixed')
             #print "After deleting, ellipse is:"
             #printellipse(ellipses[i])
             issmall[i] = False
@@ -680,9 +684,9 @@ def trysplit(ellipses,i,isdone,L,dfore):
                 if DEBUG: print 'component %d: mu = '%j + str(mu0[j,:]) + ', major = ' + str(major0[j]) + ', minor = ' + str(minor0[j]) + ', angle = ' + str(angle0[j]) + ', area = ' + str(area0[j])
 
             # update diagnostics
-            diagnostics['nlarge_split'] += 1
+            diagnosticsAdd('nlarge_split')
             diagnostics['max_nsplit'] = max(diagnostics['max_nsplit'],ncomponents)
-            diagnostics['sum_nsplit'] += ncomponents
+            diagnosticsAdd('sum_nsplit', ncomponents)
 
             ## are any of the components too small?
             #if num.any(area0 < params.minshape.area):
@@ -758,7 +762,7 @@ def trysplit(ellipses,i,isdone,L,dfore):
     if ncomponents == 1:
         isdone[i] = True
         if DEBUG: print 'decided not to split'
-        diagnostics['nlarge_notfixed'] += 1
+        diagnosticsAdd('nlarge_notfixed')
         return isdone
     else:
         # get id
@@ -776,9 +780,9 @@ def trysplit(ellipses,i,isdone,L,dfore):
         isdone[i] = ellipses[i].area <= params.maxshape.area
         if DEBUG: print "Set isdone for original ellipse[%d] to %d"%(i,isdone[i])
         # update diagnostics
-        diagnostics['nlarge_split'] += 1
+        diagnosticsAdd('nlarge_split')
         diagnostics['max_nsplit'] = max(diagnostics['max_nsplit'],ncomponents)
-        diagnostics['sum_nsplit'] += ncomponents
+        diagnosticsAdd('sum_nsplit', ncomponents)
 
 
         # add new
@@ -837,7 +841,7 @@ def fixlarge(ellipses,L,dfore):
             print "Large detection with area %f, ignoring"%ellipses[i].area
             ellipses[i].area = 0
             isdone[i] = True
-            diagnostics['nlarge_ignored'] += 1
+            diagnosticsAdd('nlarge_ignored')
         else:
             if DEBUG: print 'trying to split ellipse: ' + str(ellipses[i])
             isdone = trysplit(ellipses,i,isdone,L,dfore)

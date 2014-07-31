@@ -64,7 +64,7 @@ class Ellipse:
     def __init__( self, centerX=EMPTY_VAL, centerY=EMPTY_VAL,
                   sizeW=EMPTY_VAL, sizeH=EMPTY_VAL,
                   angle=EMPTY_VAL, area=EMPTY_VAL, identity=-1,
-                  issplit=False):
+                  issplit=False, merged_areas=None ):
 		# KB 20120109: keep track of whether the ellipse is a result of splitting a connected component
         self.center = Point( centerX, centerY )
         self.size = Size( sizeW, sizeH )
@@ -72,6 +72,7 @@ class Ellipse:
         self.area = area
         self.identity = identity
         self.issplit = issplit
+        self.merged_areas = list(merged_areas) if merged_areas else None
 
     def make_dummy( self ):
         """A dummy ellipse has its area (only) set to DUMMY_VAL ."""
@@ -144,7 +145,7 @@ class Ellipse:
     def copy( self ):
         other = Ellipse( self.center.x, self.center.y,
                      self.size.width, self.size.height,
-                     self.angle, self.area, self.identity, self.issplit )
+                     self.angle, self.area, self.identity, self.issplit, self.merged_areas )
         return other
 
     def Euc_dist( self, other ):

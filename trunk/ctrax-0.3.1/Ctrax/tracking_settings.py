@@ -965,6 +965,7 @@ class TrackingSettings:
             self.info_mini = mini
         else:
             self.ShowObsInfo( None )
+            self.info_text.SetValue('x=%.1f, y=%.1f' %(x, y))
 
         
     def ShowObsInfo(self,ellipse):
@@ -972,8 +973,7 @@ class TrackingSettings:
         if ellipse is None:
             self.info_text.SetValue( "" )
         else:
-            self.info_text.SetValue('area=%.2f, maj=%.2f, min=%.2f, ecc=%.2f'%(ellipse.area,ellipse.major,ellipse.minor,ellipse.minor/ellipse.major))
-
+            self.info_text.SetValue('area=%.2f, maj=%.2f, min=%.2f, ecc=%.2f, y=%.1f'%(ellipse.area,ellipse.major,ellipse.minor,ellipse.minor/ellipse.major,ellipse.center.y))
 
     def GetObsFiltered(self):
         if not(hasattr(self,'obs_filtered') and self.obs_filtered.issame(self.show_frame)):

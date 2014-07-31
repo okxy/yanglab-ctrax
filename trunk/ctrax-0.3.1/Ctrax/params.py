@@ -118,14 +118,15 @@ class Parameters:
         self.SHOW_DEV = 4
         self.SHOW_CC = 5
         self.SHOW_ELLIPSES = 6
-        self.SHOW_EXPBGFGMODEL_LLR = 7
-        self.SHOW_EXPBGFGMODEL_ISBACK = 8
-        self.SHOW_EXPBGFGMODEL_BGMU = 9
-        self.SHOW_EXPBGFGMODEL_FGMU = 10
-        self.SHOW_EXPBGFGMODEL_BGSIGMA = 11
-        self.SHOW_EXPBGFGMODEL_FGSIGMA = 12
-        self.SHOW_EXPBGFGMODEL_FRACFRAMESISBACK = 13
-        self.SHOW_EXPBGFGMODEL_MISSINGDATA = 14
+        self.SHOW_BG_AND_DIST = 7
+        self.SHOW_EXPBGFGMODEL_LLR = 8
+        self.SHOW_EXPBGFGMODEL_ISBACK = 9
+        self.SHOW_EXPBGFGMODEL_BGMU = 10
+        self.SHOW_EXPBGFGMODEL_FGMU = 11
+        self.SHOW_EXPBGFGMODEL_BGSIGMA = 12
+        self.SHOW_EXPBGFGMODEL_FGSIGMA = 13
+        self.SHOW_EXPBGFGMODEL_FRACFRAMESISBACK = 14
+        self.SHOW_EXPBGFGMODEL_MISSINGDATA = 15
         
         self.BG_SHOW_STRINGS = ['Background Image',
                                 'Distance from Background',
@@ -133,7 +134,8 @@ class Parameters:
                                 'Background-Only Areas',
                                 'Normalization Image',
                                 'Connected Components',
-                                'Ellipse Fits']
+                                'Ellipse Fits',
+                                'Background and Distance']
         self.EXPBGFGMODEL_SHOW_STRINGS = ['Prior Log-Likelihood Ratio',
                                           'Use in Background Model',
                                           'Prior Background Mean Px Intensity',
@@ -173,6 +175,11 @@ class Parameters:
         self.nids = long( 0 )
 
         self.version = 0
+
+        self.use_shadow_detector = False
+        self.shadow_detector_minarea = 50
+        self.recalc_bg_minutes = 60   # 0: do not recalculate
+        self.percentile_for_bg = 0    # 0: median
 
         ## Movie Parameters ###
 
@@ -415,6 +422,11 @@ diagnostics['max_nsplit'] = 0
 diagnostics['sum_nsplit'] = 0
 diagnostics['nlarge_ignored'] = 0
 diagnostics['nframes_analyzed'] = 0
+
+def diagnosticsAdd(key, val=1):
+    if val != 0:
+        diagnostics[key] += val
+        print ">>>", key, val
 
 class GUIConstants:
     def __init__( self ):

@@ -677,11 +677,16 @@ class AnnotationFile:
 
         # parameters
 
+        self.file.write("use_shadow_detector:%d\n"%params.use_shadow_detector)
+        self.file.write("shadow_detector_minarea:%.2f"%params.shadow_detector_minarea)
+        self.file.write("recalc_bg_minutes:%d"%params.recalc_bg_minutes)
+        self.file.write("percentile_for_bg:%d"%params.percentile_for_bg)
+
         # background parameters
         if hasattr( self.bg_imgs, 'bg_type' ):
             self.file.write("bg_type:%s\n"%self.bg_imgs.bg_type)
-        self.file.write("n_bg_std_thresh:%.1f\n" %params.n_bg_std_thresh )
-        self.file.write("n_bg_std_thresh_low:%.1f\n" %params.n_bg_std_thresh_low )
+        self.file.write("n_bg_std_thresh:%.3f\n" %params.n_bg_std_thresh )
+        self.file.write("n_bg_std_thresh_low:%.3f\n" %params.n_bg_std_thresh_low )
         self.file.write("bg_std_min:%.2f\n" %params.bg_std_min)
         self.file.write("bg_std_max:%.2f\n" %params.bg_std_max)
         if hasattr( self.bg_imgs, 'n_bg_frames' ):
@@ -960,7 +965,15 @@ class AnnotationFile:
             if len(value) == 0:
                 continue
 
-            if parameter == 'bg_type' and self.bg_imgs is not None:
+            if parameter == 'use_shadow_detector':
+                params.use_shadow_detector = bool(int(value))
+            elif parameter == 'shadow_detector_minarea':
+                params.shadow_detector_minarea = float(value)
+            elif parameter == 'recalc_bg_minutes':
+                params.recalc_bg_minutes = int(value)
+            elif parameter == 'percentile_for_bg':
+                params.percentile_for_bg = int(value)
+            elif parameter == 'bg_type' and self.bg_imgs is not None:
                 try:
                     bgt = int( value ) # ann from ver < 0.2.0
                     if bgt == 0:
@@ -1347,6 +1360,11 @@ class AnnotationFile:
         if DEBUG_LEVEL > 0: print "reading in movie to save stamps"
         stamps = params.movie.get_some_timestamps(t1=startframe,t2=startframe+nframes)
         save_dict['timestamps'] = stamps
+
+        if self.bg_imgs.on_changes:
+            onCh = num.array(self.bg_imgs.on_changes)
+            onCh[:,0] += 1   # make frame numbers start with 1 for MATLAB
+            save_dict['YL_on_changes'] = onCh
 
         savemat( filename, save_dict, oned_as='column' )
     
