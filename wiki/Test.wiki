@@ -1,3 +1,7 @@
 #summary Test page for Wiki features.
 
 Link to [https://code.google.com/p/yanglab-ctrax/source/browse/#svn%2Ftrunk%2Frun-ctrax run-ctrax] directory.
+
+Link to [https://code.google.com/p/yanglab-ctrax/source/browse/trunk/ctrax-0.3.1/Ctrax/algorithm.py algorithm.py].
+
+r6 has changes for yanglab-ctrax.
