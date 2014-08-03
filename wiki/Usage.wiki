@@ -1,0 +1,26 @@
+#summary How to use yanglab-ctrax and the analysis scripts.
+
+== Tracking and analyzing the sample video ==
+
+This project has a 10-minute sample video (from our "UV on/off" experiments) that can be used to go through the tracking and analysis process.  The sample is 16.1MB and in M-JPEG format.  (It is the first 10 minutes of an 8h video with 853MB.) 
+
+  * Download the video.
+  * Track.
+  * Start MATLAB
+    * One-time: go into the Ctrax-allmatlab-X.Y.Z/behavioralmicroarray directory and execute
+{{{
+setuppath
+cd ../yanglab/
+}}}
+    * For each video:
+{{{
+[trx,matname,succeeded] = load_tracks
+analyze_tracks                          % select "Cancel" when asked to choose an egg file
+}}}
+
+== Changing the tracking settings ==
+
+== Features of the analysis scripts ==
+
+  * analyze_tracks
+  * analyze_learning
