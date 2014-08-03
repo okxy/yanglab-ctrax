@@ -678,9 +678,9 @@ class AnnotationFile:
         # parameters
 
         self.file.write("use_shadow_detector:%d\n"%params.use_shadow_detector)
-        self.file.write("shadow_detector_minarea:%.2f"%params.shadow_detector_minarea)
-        self.file.write("recalc_bg_minutes:%d"%params.recalc_bg_minutes)
-        self.file.write("percentile_for_bg:%d"%params.percentile_for_bg)
+        self.file.write("shadow_detector_minarea:%.2f\n"%params.shadow_detector_minarea)
+        self.file.write("recalc_bg_minutes:%d\n"%params.recalc_bg_minutes)
+        self.file.write("percentile_for_bg:%d\n"%params.percentile_for_bg)
 
         # background parameters
         if hasattr( self.bg_imgs, 'bg_type' ):
