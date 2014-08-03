@@ -45,7 +45,8 @@ IMG_HEIGHT = 480   # used when searching directory tree
 TEST_DIR = "__match_template_test__"
 
 DFLT_TMPLT = "Standard"
-TMPLT_PREFIX = "C:/SSD/tracking/Ctrax/tmplt"
+TMPLT_PATH = os.environ.get('YL_TMPLT_PATH') or "C:/SSD/tracking/Ctrax"
+TMPLT_PREFIX = os.path.join(TMPLT_PATH, "tmplt")
 TMPLTS = {
   'Standard': {
     'rotate': False,
