@@ -19,6 +19,7 @@ if ~exist('matname','var'),
   end
   matname = [matpath,matname];
 end
+YL_matname = matname;
 
 tmp = load(matname, '-mat');
 fprintf('loaded %s\n',matname);
@@ -67,6 +68,10 @@ end
 for i = 1:length(trx),
   trx(i).off = -trx(i).firstframe + 1;
   trx(i).matname = matname;
+end
+trx(1).YL_matname = YL_matname;
+if isfield(tmp, 'YL_on_changes')
+  trx(1).YL_on_changes = tmp.YL_on_changes
 end
 
 succeeded = true;
