@@ -2,25 +2,47 @@
 
 == Tracking and analyzing the sample video ==
 
-This project has a 10-minute sample video (from our "UV on/off" experiments) that can be used to go through the tracking and analysis process.  The sample is 16.1MB and in M-JPEG format.  (It is the first 10 minutes of an 8h video with 853MB.) 
+This project has a 10-minute sample video (from our "UV on/off" experiments) that can be used to go through the tracking and analysis process.  The sample video is 16.1MB, 320x240 pixels, 7.5fps, grayscale, and in M-JPEG format.  (It is the first 10 minutes of an 8h video we recorded using 640x480 pixels, 15fps, color, and H.264 format and then converted using [https://code.google.com/p/yanglab-ctrax/source/browse/trunk/goodies/convertStandard.js convertStandard.js].) 
 
-  * Download the video.
-  * Track.
-  * Start MATLAB
-    * One-time: go into the Ctrax-allmatlab-X.Y.Z/behavioralmicroarray directory and execute
+  * *Download the sample video*
+    * In the directory where you installed run-ctrax, execute
+{{{
+svn co https://yanglab-ctrax.googlecode.com/svn/trunk/sample-video
+}}}
+  * *Track*
+    * In the run-ctrax directory, execute
+{{{
+python runCtrax.py   # "python -u" can be required on Windows
+}}}
+    (I usually use a shortcut for runCtrax.py.)
+    * Tracking for the sample video takes about 64s on an i7-4770 machine.
+    * After tracking is done, the sample-video directory has several new files, including
+      * An image showing the backgrounds calculated (ending in "bg.png").  Note that there are two backgrounds calculated in this case -- one for "UV off" and one for "UV on."
+      * An image showing the template match used for the shadow detector (ending in "tm.jpg").
+  * *Analyze*
+    * Start MATLAB.
+    * Go to the Ctrax-allmatlab-X.Y.Z/behavioralmicroarray directory and execute
 {{{
 setuppath
 cd ../yanglab/
 }}}
-    * For each video:
+    * Load the Ctrax MAT-file (which contains the trajectory data) and analyze it:
 {{{
 [trx,matname,succeeded] = load_tracks
 analyze_tracks                          % select "Cancel" when asked to choose an egg file
 }}}
 
-== Changing the tracking settings ==
+== Changing the parameters for our Ctrax extensions ==
+
+The parameters for our extensions with default values are:
+{{{
+use_shadow_detector = False
+shadow_detector_minarea = 50
+recalc_bg_minutes = 60         # 0: do not recalculate
+percentile_for_bg = 0          # 0: median
+}}}
+We change the parameters for our extensions via editing the settings file. (In fact, the parameters for our extensions cannot be changed in the GUI.)  A sample settings file (settings.ann) is in the [https://code.google.com/p/yanglab-ctrax/source/browse/#svn%2Ftrunk%2Frun-ctrax run-ctrax] directory.
 
 == Features of the analysis scripts ==
 
-  * analyze_tracks
-  * analyze_learning
+Our lab's Wiki has a [http://yanglab.pbworks.com/analyze_tracks page] with more details on how to use our analyze_tracks script.
