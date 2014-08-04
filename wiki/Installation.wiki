@@ -25,7 +25,7 @@ svn revert --depth=infinity Ctrax
 >>> Yang Lab version <<<
 ...
 }}}
-    * On Windows, I usually copy Ctrax.bat (from the run-ctrax directory) into C:\Python27\Scripts, and can then call the self-built Ctrax with `Ctrax.bat`.
+    * On Windows, I usually copy Ctrax.bat (from the [https://code.google.com/p/yanglab-ctrax/source/browse/#svn%2Ftrunk%2Frun-ctrax run-ctrax] directory, see next section) into C:\Python27\Scripts and can then call the self-built Ctrax with `Ctrax.bat`.
 
 
 == Installing the script to _run_ yanglab-ctrax ==
@@ -37,7 +37,13 @@ The runCtrax.py script and some files it needs can be installed in a directory o
 svn co https://yanglab-ctrax.googlecode.com/svn/trunk/run-ctrax
 }}}
 
-We change the parameters for our extensions (see ...) via editing the settings file.  In fact, the parameters for our extensions cannot be changed in the GUI.  (move?)
+We change the parameters for our extensions (see [Usage]) via editing the settings file.  In fact, the parameters for our extensions cannot be changed in the GUI.
+
+The run-ctrax directory contains "template images" that are needed by both yanglab-ctrax and our analysis scripts.  The best way to let the code know the path to the template images is by creating the environment variable
+{{{
+YL_TMPLT_PATH
+}}}
+with the path of your run-ctrax directory (e.g., "C:/SSD/tracking/run-ctrax").
 
 == Installing our (MATLAB) analysis scripts ==
 
