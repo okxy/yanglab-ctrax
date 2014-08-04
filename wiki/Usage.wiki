@@ -14,7 +14,7 @@ svn co https://yanglab-ctrax.googlecode.com/svn/trunk/sample-video
 {{{
 python runCtrax.py   # "python -u" can be required on Windows
 }}}
-    (I usually create a shortcut for runCtrax.py and then use the shortcut.)  The "movie subdirectory" in this case is `run-ctrax/sample-video`.
+    (I usually create a shortcut for runCtrax.py and then use the shortcut.)  The "movie subdirectory" runCtrax.py asks for is `run-ctrax/sample-video` in this case.
     * Tracking for the sample video takes about 64s on an i7-4770 machine.
     * After tracking is done, the sample-video directory has several new files, including
       * An image showing the backgrounds calculated (ending in "bg.png").  Note that there are two backgrounds calculated in this case -- one for "UV off" and one for "UV on."
