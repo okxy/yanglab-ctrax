@@ -13,3 +13,5 @@ http://yanglab-ctrax.googlecode.com/svn/wiki/images/borders-and-trajectories.png
 http://yanglab-ctrax.googlecode.com/svn/wiki/images/borders-and-trajectories.jpg
 
 http://cuda-convnet.googlecode.com/svn/wiki/images/abs.gif
+
+http://yanglab.pbworks.com/w/file/fetch/83657839/borders-and-trajectories.png
