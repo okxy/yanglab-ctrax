@@ -5,3 +5,6 @@ Link to [https://code.google.com/p/yanglab-ctrax/source/browse/#svn%2Ftrunk%2Fct
 Link to [https://code.google.com/p/yanglab-ctrax/source/browse/trunk/ctrax-0.3.1/Ctrax/algorithm.py algorithm.py].
 
 r6 has changes for yanglab-ctrax.
+
+Image:
+https://code.google.com/p/yanglab-ctrax/source/browse/wiki/images/borders-and-trajectories.PNG
