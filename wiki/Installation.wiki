@@ -37,13 +37,11 @@ The runCtrax.py script and some files it needs can be installed in a directory o
 svn co https://yanglab-ctrax.googlecode.com/svn/trunk/run-ctrax
 }}}
 
-We change the parameters for our extensions (see [Usage]) via editing the settings file.  In fact, the parameters for our extensions cannot be changed in the GUI.
-
 The run-ctrax directory contains "template images" that are needed by both yanglab-ctrax and our analysis scripts.  The best way to let the code know the path to the template images is by creating the environment variable
 {{{
 YL_TMPLT_PATH
 }}}
-with the path of your run-ctrax directory (e.g., "C:/SSD/tracking/run-ctrax").
+and setting its value to the path of your run-ctrax directory (e.g., "C:/SSD/tracking/run-ctrax").
 
 == Installing our (MATLAB) analysis scripts ==
 
