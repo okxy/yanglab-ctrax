@@ -2,7 +2,7 @@
 
 == Tracking and analyzing the sample video ==
 
-This project has a 10-minute sample video (from our "UV on/off" experiments) that can be used to go through the tracking and analysis process.  The sample video is 16.1MB, 320x240 pixels, 7.5fps, grayscale, and in M-JPEG format.  (It is the first 10 minutes of an 8h video we recorded using 640x480 pixels, 15fps, color, and H.264 format and then converted using Avidemux and [https://code.google.com/p/yanglab-ctrax/source/browse/trunk/goodies/convertStandard.js convertStandard.js].  The reason for the different formats and some typical file sizes are given in this Ctrax Google Group [https://groups.google.com/d/msg/ctrax/mB-xd0NPFpg/L8B_ZC5T-sEJ post].) 
+This project has a 10-minute sample video (from our "UV on/off" experiments) that can be used to go through the tracking and analysis process.  The sample video is 16.1MB, 320x240 pixels, 7.5fps, grayscale, and in M-JPEG format.  (It is the first 10 minutes of an 8h video we recorded using 640x480 pixels, 15fps, color, and H.264 format and then converted using Avidemux and [https://code.google.com/p/yanglab-ctrax/source/browse/trunk/goodies/convertStandard.js convertStandard.js].  The reason for the different formats and some typical file sizes are given in [https://groups.google.com/d/msg/ctrax/mB-xd0NPFpg/L8B_ZC5T-sEJ this] Ctrax Google Group post.) 
 
   * *Download the sample video*
     * In the directory where you installed run-ctrax, execute
