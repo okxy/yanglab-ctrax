@@ -18,7 +18,7 @@ svn co https://yanglab-ctrax.googlecode.com/svn/trunk/ctrax-0.3.1/Ctrax --force
 svn revert --depth=infinity Ctrax
 }}}
     and continue the build instructions.
-    * We have some notes on our "experiences" building Ctrax on our lab's Wiki ([http://yanglab.pbworks.com/Building-Ctrax here]).  The notes are mainly about Windows since we do all our tracking on several Windows 7 machines.
+    * We have some [http://yanglab.pbworks.com/Building-Ctrax notes] on our "experiences" building Ctrax on our lab's Wiki.  The notes are mainly about Windows since we do all our tracking on several Windows 7 machines.
   * After you successfully built Ctrax, you should see the following in the stdout/stderr window when you start it:
 {{{
 ******** Ctrax Warning and Error Messages ********
