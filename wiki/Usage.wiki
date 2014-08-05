@@ -50,7 +50,16 @@ shadow_detector_minarea = 50
 recalc_bg_minutes = 60         # 0: do not recalculate
 percentile_for_bg = 0          # 0: median
 }}}
-We change the parameters for our extensions via editing the settings file. (In fact, the parameters for our extensions can currently not be changed in the GUI.)  A sample settings file (settings.ann) is in the [https://code.google.com/p/yanglab-ctrax/source/browse/#svn%2Ftrunk%2Frun-ctrax run-ctrax] directory.
+We change the parameters for our extensions via editing the settings file. (In fact, the parameters for our extensions can currently not be changed in the GUI.)  A sample settings file (settings.ann) is in the [https://code.google.com/p/yanglab-ctrax/source/browse/#svn%2Ftrunk%2Frun-ctrax run-ctrax] directory.  Here the first few lines of the file:
+{{{
+Ctrax header
+version:0.3.1
+use_shadow_detector:1
+recalc_bg_minutes:60
+percentile_for_bg:20
+bg_type:dark_on_light
+...
+}}}
 
 == Features of the analysis scripts ==
 
