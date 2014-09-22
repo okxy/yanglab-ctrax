@@ -55,7 +55,7 @@ svn co https://yanglab-ctrax.googlecode.com/svn/trunk/Ctrax-allmatlab/yanglab
 
 == Installing the goodies ==
 
-The goodies are currently only some scripts to automate Avidemux video conversions.  I [https://groups.google.com/d/msg/ctrax/ZdFBLfGYdTw/rWPVJFCXs20J posted] some of the scripts on the Ctrax Google Group.  Note the the scripts required Avidemux 2.5.6 last time I checked.
+The goodies are currently only some scripts to automate Avidemux video conversions.  I [https://groups.google.com/d/msg/ctrax/ZdFBLfGYdTw/rWPVJFCXs20J posted] some of the scripts on the Ctrax Google Group.  Note the the scripts required Avidemux [http://sourceforge.net/projects/avidemux/files/avidemux/2.5.6/ 2.5.6] last time I checked.
 
 The goodies can be installed in a directory of your choice using
 {{{
