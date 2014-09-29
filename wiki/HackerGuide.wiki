@@ -22,4 +22,10 @@ ans =
 
 == Analysis scripts ==
 
-  * The code for the analysis scripts should be "refactored."
+  * The code for the analysis scripts should be refactored.  E.g., it should be split into more files.  My so-so excuse is that I learned MATLAB while writing [https://code.google.com/p/yanglab-ctrax/source/browse/trunk/Ctrax-allmatlab/yanglab/analyze_tracks.m analyze_tracks.m] and that I dislike (strongly) that MATLAB does not seem to support multiple "utility" functions in a single file, typically resulting in too many files for my taste.
+  * I used one nice trick to speed up [https://code.google.com/p/yanglab-ctrax/source/browse/trunk/Ctrax-allmatlab/yanglab/analyze_tracks.m analyze_tracks.m] more than 100-fold.  (I think the trick is nice, but I cannot rule out that I am biased in this case. :)  The code initially looped over each frame, and the runtime of this loop was starting to irritate me.  (About one minute for our typical 8h video, so not terrible, but I run the script often when working on it, and the code in the loop tended to grow from time to time.)  A "standard" trick to strongly speed up MATLAB is to turn loops into array operations, which replaces the interpreted loop with native code.  But my loop had determinant calculations, and MATLAB's [http://www.mathworks.com/help/matlab/ref/det.html det()] seemed not able to calculate multiple determinants in a single call.  The solution was to "manually" calculate the determinants without MATLAB's det().  In analyze_tracks.m, this looks like this:  (The det() here calculates the determinants for _all_ frames with just a few array operations.) 
+{{{
+  det = @(m) squeeze(m(1,1,:) .* m(2,2,:) - m(1,2,:) .* m(2,1,:))';
+  [det1, det2] = deal(det(m1), det(m2));
+}}}
+  Runtime went down from about one minute to less than one second, while the code became only a little more complicated.
