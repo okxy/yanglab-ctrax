@@ -2,8 +2,8 @@
 
 == Ctrax extensions (yanglab-ctrax) ==
 
-  * To see (almost) all of the changes we did to Ctrax, check out r6.
-  * The on/off detector learns the on/off state for each frame during tracking, and adds the info to the Ctrax MAT-file in field `YL_on_changes`.  The format is best explained in an example:
+  * To see (almost) all of the changes to implement the Ctrax extensions, check out r6.
+  * The on/off detector (see [http://arxiv.org/abs/1409.7272 paper]) learns the on/off state for each frame during tracking, and adds the info to the Ctrax MAT-file in field `YL_on_changes`.  The format is best explained in an example:
 {{{
 >> trx(1).YL_on_changes(1:5, :)
 
@@ -15,10 +15,10 @@ ans =
         6740           0
         8992           1
 }}}
-    * There is a row for each _change_ in on/off state.
-      * The first column has the number of the _first_ frame in the new state.
+    * There is one row for each _change_ in on/off state.
+      * The first column has the number (index) of the _first_ frame in the new state.  (Following MATLAB style, the first frame of the video has number 1.)
       * The second column has the new state ("on"=1).
-    * So in this example, the state was "on" from frame 1 to 2236, then "off" from frame 2237 to 4487, etc.
+    * So in this example, the state was detected as "on" from frame 1 to 2236, then "off" from frame 2237 to 4487, etc.
 
 == Analysis scripts ==
 
